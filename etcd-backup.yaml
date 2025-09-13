@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etcd-backup
+  namespace: kube-system
+spec:
+  schedule: "0 2 * * *"   # Run daily at 02:00
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          hostNetwork: true   # ensures it can reach 127.0.0.1:2379
+          nodeSelector: 
+           kubernetes.io/hostname: "worker2"
+          containers:
+          - name: etcd-backup
+            image: bitnami/etcd:3.5.13   # has etcdctl
+            env:
+            - name: ETCDCTL_API
+              value: "3"
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              BACKUP_DIR="/var/backups/etcd"
+              mkdir -p "$BACKUP_DIR"
+              DATE=$(date +%F_%H-%M-%S)
+              SNAPSHOT="$BACKUP_DIR/etcd-snapshot-$DATE.db"
+
+              echo ">>> Taking etcd snapshot..."
+              etcdctl \
+                --endpoints=https://10.2.4.2:2379 \
+                --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+                --cert=/etc/kubernetes/pki/etcd/server.crt \
+                --key=/etc/kubernetes/pki/etcd/server.key \
+                snapshot save "$SNAPSHOT"
+
+              echo ">>> Cleaning old snapshots..."
+              find "$BACKUP_DIR" -type f -name "etcd-snapshot-*.db" -mtime +7 -exec rm {} \;
+
+              echo ">>> Snapshot saved: $SNAPSHOT"
+            volumeMounts:
+            - name: etcd-certs
+              mountPath: /etc/kubernetes/pki/etcd
+              readOnly: true
+            - name: backup-volume
+              mountPath: /var/backups/etcd
+          volumes:
+          - name: etcd-certs
+            hostPath:
+              path: /root/etcd
+              type: Directory
+          - name: backup-volume
+            hostPath:
+              path: /var/backups/etcd
+              type: DirectoryOrCreate
