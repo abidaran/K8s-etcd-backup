@@ -9,12 +9,12 @@ spec:
       restartPolicy: OnFailure
       hostNetwork: true
       nodeSelector:
-        kubernetes.io/hostname: "k8s-master1"
+        kubernetes.io/hostname: "<your node name>"
       tolerations:
             - key: "node-role.kubernetes.io/control-plane"
               operator: "Exists"
               effect: "NoSchedule"
-            - key: "node-role.kubernetes.io/master"   # legacy taint on some clusters
+            - key: "node-role.kubernetes.io/master"   
               operator: "Exists"
               effect: "NoSchedule"    
       volumes:

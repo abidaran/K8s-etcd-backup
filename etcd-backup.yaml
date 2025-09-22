@@ -4,15 +4,15 @@ metadata:
   name: etcd-backup
   namespace: kube-system
 spec:
-  schedule: "0 2 * * *"   # Run daily at 02:00
+  schedule: "0 2 * * *"   
   jobTemplate:
     spec:
       template:
         spec:
           restartPolicy: OnFailure
-          hostNetwork: true   # ensures it can reach 127.0.0.1:2379
+          hostNetwork: true   
           nodeSelector: 
-           kubernetes.io/hostname: "k8s-master1"
+           kubernetes.io/hostname: "<your node name>"
           tolerations:
             - key: "node-role.kubernetes.io/control-plane"
               operator: "Exists"
@@ -35,7 +35,7 @@ spec:
                   mountPath: /var/backups/etcd
           containers:
           - name: etcd-backup
-            image: bitnami/etcd:3.5.13   # has etcdctl
+            image: bitnami/etcd:3.5.13   
             env:
             - name: ETCDCTL_API
               value: "3"
@@ -51,7 +51,7 @@ spec:
 
               echo ">>> Taking etcd snapshot..."
               etcdctl \
-                --endpoints=https://172.17.17.13:2379 \
+                --endpoints=https://<etcd IP address>:2379 \
                 --cacert=/etc/kubernetes/pki/etcd/ca.crt \
                 --cert=/etc/kubernetes/pki/etcd/server.crt \
                 --key=/etc/kubernetes/pki/etcd/server.key \
